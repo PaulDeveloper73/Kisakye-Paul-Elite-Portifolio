@@ -47,7 +47,7 @@ jobs:
           fi
 
       - name: Upload ESLint reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: eslint-reports
           path: |
@@ -92,7 +92,7 @@ jobs:
         run: npm run test -- --coverage
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage
