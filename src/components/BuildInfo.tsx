@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-Usage  
+Usage;
 // Import and place <BuildInfo /> in your footer or admin page. Enable only for previews/staging by setting REACT_APP_SHOW_BUILD_INFO=true in the CI build step for PR previews.
 
 type BuildInfo = {
