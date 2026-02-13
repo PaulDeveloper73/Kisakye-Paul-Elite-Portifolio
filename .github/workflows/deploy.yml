@@ -1,15 +1,19 @@
 name: Enterprise CI/CD Portfolio
 
+# Trigger on pushes to main and on pull requests targeting main
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 permissions:
   contents: write
+
+# Cancel outdated runs for the same branch to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
@@ -17,35 +21,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        # Checkout repository so subsequent steps can access source files and config.
+        # Checkout repository to access source and config files.
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-        # Set Node.js version to match local development and enable npm caching for faster runs.
+        # Use a single Node LTS version for consistency with local dev.
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
+        # Cache npm to speed up repeated CI runs while keeping installs deterministic.
 
       - name: Install dependencies
         run: npm ci
-        # Use npm ci for reproducible installs in CI (reads package-lock.json).
+        # Use npm ci for reproducible installs based on package-lock.json.
 
-      - name: Show environment and files
+      - name: Show environment (diagnostics)
         run: |
           node -v
           npm -v
           npx eslint --version
-          echo "---- package.json ----"
-          sed -n '1,200p' package.json
-          echo "---- eslint.config.js (first 200 lines) ----"
-          test -f eslint.config.js && sed -n '1,200p' eslint.config.js || echo "eslint.config.js missing"
-        # Diagnostic output to help debug CI failures quickly (versions and key config files).
+        # Helpful diagnostics when debugging CI failures.
 
-      - name: Run ESLint and save reports
+      - name: ESLint (reports)
         run: |
-          # Produce both machine-friendly and human-friendly reports.
+          # Produce both machine-friendly (unix) and human-friendly (stylish) reports.
           npx eslint src --ext .ts,.tsx -f unix > eslint-report-unix.txt || true
           npx eslint src --ext .ts,.tsx -f stylish > eslint-report-stylish.txt || true
-          echo "Saved reports"
           # Fail the job if any ESLint errors are present (keeps CI strict about code quality).
           if grep -E "error" eslint-report-unix.txt >/dev/null; then
             echo "ESLint found errors — failing job."
@@ -59,9 +65,9 @@ jobs:
           path: |
             eslint-report-unix.txt
             eslint-report-stylish.txt
-        # Upload reports as artifacts so maintainers can download and inspect failures.
+        # Upload reports so maintainers can download and inspect failures.
 
-      - name: Run Prettier Check
+      - name: Prettier check
         run: npm run format:check
         # Ensure code style consistency; CI will fail if files are not formatted.
 
@@ -71,22 +77,27 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
-        # Fresh checkout for isolated job environment.
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - run: npm ci
-        # Install dependencies before running type checks.
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
 
-      - name: TypeScript Type Check
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
         run: npx tsc --noEmit
-        # Run TypeScript compiler in type-check-only mode to catch type errors early.
+        # Run the TypeScript compiler in type-check-only mode to catch type errors early.
 
   test:
-    name: Run Tests & Coverage
+    name: Tests & Coverage
     runs-on: ubuntu-latest
     needs: type-check
     steps:
@@ -95,83 +106,130 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
-      - run: npm ci
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
 
-      - name: Run Vitest Tests
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests and coverage
         run: npm run test -- --coverage
-        # Execute unit tests and collect coverage; ensure coverage provider dependency is installed.
+        # Ensure coverage provider (e.g., @vitest/coverage-v8) is installed in devDependencies.
 
-      - name: Upload Coverage Report
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage
-        # Persist coverage artifacts for later inspection or CI dashboards.
+          retention-days: 7
+        # Persist coverage artifacts for later inspection.
 
-  build-pr-preview:
-    name: Build & Deploy PR Preview
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     needs: test
+    outputs:
+      dist-path: ./dist
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
 
       - name: Install dependencies
         run: npm ci
-        # Install dependencies in the PR environment.
 
-      - name: Build Project
+      - name: Build project
         run: npm run build
-        # Build the production artifact (Vite outputs to ./dist by default).
+        # Build production assets (Vite outputs to ./dist by default).
 
-      - name: Deploy PR Preview
+      - name: Write build metadata
+        run: |
+          mkdir -p dist
+          echo "COMMIT=${{ github.sha }}" > dist/BUILD_INFO
+          echo "BRANCH=${{ github.ref }}" >> dist/BUILD_INFO
+          echo "RUN_ID=${{ github.run_id }}" >> dist/BUILD_INFO
+          echo "BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> dist/BUILD_INFO
+        # Embed provenance into the artifact for traceability.
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+          retention-days: 14
+        # Upload the exact build artifact so deploy jobs use the same output.
+
+  deploy-pr:
+    name: Deploy PR Preview
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+        # Use the same artifact produced by the build job.
+
+      - name: Deploy PR preview to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
           publish_dir: ./dist
+          publish_branch: gh-pages
           destination_dir: pr-${{ github.event.pull_request.number }}
-          user_name: "GitHub Actions"
-          user_email: "actions@github.com"
-        # Publish a preview build to a subdirectory on gh-pages for quick review.
+        # Publish a preview build to a PR-specific path for reviewers.
 
-      - name: Comment PR with Preview URL
+      - name: Run post-deploy smoke checks
+        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+        env:
+          CI: true
+        # Run lightweight checks to ensure the preview is healthy.
+
+      - name: Comment PR with preview URL
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            🚀 **PR Preview Available**
-            https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/
-        # Post a comment on the PR with a direct link to the preview site for reviewers.
+          body: "PR preview: https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+        # Post a comment so reviewers can access the preview quickly.
 
-  build-and-deploy:
-    name: Build & Deploy Production
-    runs-on: ubuntu-latest
+  deploy-prod:
+    name: Deploy Production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test
+    runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: 22
-          cache: npm
+          name: dist
+          path: ./dist
 
-      - name: Install dependencies
-        run: npm ci
-        # Use npm ci to ensure deterministic installs for production build.
-
-      - name: Build Project
-        run: npm run build
-        # Build production assets; ensure Vite base is configured if serving from a subpath.
+      - name: Run pre-deploy smoke checks
+        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
+        env:
+          CI: true
+        # Optional pre-deploy check against the production URL (useful if you have a staging URL instead).
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -179,6 +237,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
-          user_name: "GitHub Actions"
-          user_email: "actions@github.com"
-        # Deploy the built site to the gh-pages branch for production hosting.
+        # Deploy the verified artifact to the production branch.

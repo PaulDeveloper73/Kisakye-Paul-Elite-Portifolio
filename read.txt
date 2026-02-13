@@ -1,0 +1,935 @@
+### CI workflow — `.github/workflows/ci.yml`
+
+```yaml
+name: Enterprise CI/CD Portfolio
+
+# Trigger on pushes to main and on pull requests targeting main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+# Cancel outdated runs for the same branch to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # Checkout repository to access source and config files.
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+        # Use a single Node LTS version for consistency with local dev.
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
+        # Cache npm to speed up repeated CI runs while keeping installs deterministic.
+
+      - name: Install dependencies
+        run: npm ci
+        # Use npm ci for reproducible installs based on package-lock.json.
+
+      - name: Show environment (diagnostics)
+        run: |
+          node -v
+          npm -v
+          npx eslint --version
+        # Helpful diagnostics when debugging CI failures.
+
+      - name: ESLint (reports)
+        run: |
+          # Produce both machine-friendly (unix) and human-friendly (stylish) reports.
+          npx eslint src --ext .ts,.tsx -f unix > eslint-report-unix.txt || true
+          npx eslint src --ext .ts,.tsx -f stylish > eslint-report-stylish.txt || true
+          # Fail the job if any ESLint errors are present (keeps CI strict about code quality).
+          if grep -E "error" eslint-report-unix.txt >/dev/null; then
+            echo "ESLint found errors — failing job."
+            exit 1
+          fi
+
+      - name: Upload ESLint reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-reports
+          path: |
+            eslint-report-unix.txt
+            eslint-report-stylish.txt
+        # Upload reports so maintainers can download and inspect failures.
+
+      - name: Prettier check
+        run: npm run format:check
+        # Ensure code style consistency; CI will fail if files are not formatted.
+
+  type-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+        # Run the TypeScript compiler in type-check-only mode to catch type errors early.
+
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests and coverage
+        run: npm run test -- --coverage
+        # Ensure coverage provider (e.g., @vitest/coverage-v8) is installed in devDependencies.
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          retention-days: 7
+        # Persist coverage artifacts for later inspection.
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      dist-path: ./dist
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+        # Build production assets (Vite outputs to ./dist by default).
+
+      - name: Write build metadata
+        run: |
+          mkdir -p dist
+          echo "COMMIT=${{ github.sha }}" > dist/BUILD_INFO
+          echo "BRANCH=${{ github.ref }}" >> dist/BUILD_INFO
+          echo "RUN_ID=${{ github.run_id }}" >> dist/BUILD_INFO
+          echo "BUILT_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> dist/BUILD_INFO
+        # Embed provenance into the artifact for traceability.
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+          retention-days: 14
+        # Upload the exact build artifact so deploy jobs use the same output.
+
+  deploy-pr:
+    name: Deploy PR Preview
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+        # Use the same artifact produced by the build job.
+
+      - name: Deploy PR preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          destination_dir: pr-${{ github.event.pull_request.number }}
+        # Publish a preview build to a PR-specific path for reviewers.
+
+      - name: Run post-deploy smoke checks
+        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+        env:
+          CI: true
+        # Run lightweight checks to ensure the preview is healthy.
+
+      - name: Comment PR with preview URL
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: "PR preview: https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+        # Post a comment so reviewers can access the preview quickly.
+
+  deploy-prod:
+    name: Deploy Production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+
+      - name: Run pre-deploy smoke checks
+        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
+        env:
+          CI: true
+        # Optional pre-deploy check against the production URL (useful if you have a staging URL instead).
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+        # Deploy the verified artifact to the production branch.
+```
+
+---
+
+### `package.json` — devDependencies and scripts (add or merge into your existing file)
+
+```json
+{
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.0.0",
+    "vitest": "^1.0.0",
+    "c8": "^7.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  },
+  "scripts": {
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,md,json}\"",
+    "format:fix": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,md,json}\"",
+    "lint": "eslint src --ext .ts,.tsx",
+    "test": "vitest run",
+    "build": "vite build",
+    "ci:check": "npm run lint && npm run format:check && npx tsc --noEmit && npm run test -- --coverage"
+  }
+}
+```
+
+- **Professional note:** install the devDependencies locally and commit the resulting `package-lock.json` so `npm ci` in CI reproduces the same dependency tree.
+
+---
+
+### Vitest configuration — `vitest.config.ts`
+
+```ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',            // use V8 provider; requires @vitest/coverage-v8 in devDependencies
+      reporter: ['text', 'lcov'],// text for console, lcov for CI dashboards
+      reportsDirectory: 'coverage'
+    }
+  }
+});
+```
+
+- **Professional note:** if you prefer `c8`, change `provider` to `'c8'` and ensure `c8` is installed.
+
+---
+
+### Post-deploy smoke script — `scripts/smoke-check.sh`
+
+```bash
+#!/usr/bin/env bash
+# Lightweight smoke checks used by CI after deploys.
+# Exits non-zero on failure so CI can mark the deploy as failed.
+
+set -euo pipefail
+
+URL="${1:-}"
+if [ -z "$URL" ]; then
+  echo "Usage: $0 <url>"
+  exit 2
+fi
+
+echo "Running smoke checks against: $URL"
+
+check() {
+  local path="$1"
+  local full="${URL%/}${path}"
+  echo "Checking ${full}"
+  status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$full" || echo "000")
+  if [ "$status" != "200" ]; then
+    echo "Smoke check failed for ${full} (status: $status)"
+    exit 1
+  fi
+}
+
+# Root path check; add other critical endpoints as needed (login, health, API endpoints)
+check "/"
+
+echo "Smoke checks passed."
+```
+
+- **Make executable:** `chmod +x scripts/smoke-check.sh` before committing.
+
+---
+
+### Dependabot configuration — `.github/dependabot.yml`
+
+```yaml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+```
+
+- **Professional note:** tune the schedule and auto-merge policy to match your risk tolerance and test coverage.
+
+---
+
+### CodeQL workflow — `.github/workflows/codeql.yml`
+
+```yaml
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * 1' # weekly scan on Mondays at 03:00 UTC
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+      - name: Run CodeQL
+        uses: github/codeql-action/analyze@v2
+```
+
+- **Professional note:** schedule frequency and languages can be adjusted; review CodeQL alerts regularly and triage high-severity findings.
+
+---
+
+### BUILD_INFO consumer (optional)
+Add a small admin route or a footer snippet that fetches `/BUILD_INFO` from the site root and displays commit, branch, and build time. This helps trace which commit is deployed and speeds incident diagnosis.
+
+---
+
+## Quick apply checklist
+1. Add the files above to the repository in the specified paths.  
+2. Run locally:  
+   - `npm install --save-dev @vitest/coverage-v8 vitest c8 eslint prettier`  
+   - `npm ci`  
+   - `npm run ci:check` (verify lint, typecheck, tests, coverage)  
+   - `npm run build` (verify `dist/BUILD_INFO` is created when run in CI).  
+3. Make `scripts/smoke-check.sh` executable and commit `package-lock.json`.  
+4. Open a PR and confirm the pipeline produces a PR preview and artifacts.
+
+---///////////////////////
+
+### Install c8 and enable coverage
+
+**Install c8 as a dev dependency**
+```bash
+npm install --save-dev c8
+```
+
+**Option A Use c8 as Vitest provider**  
+1. Install `@vitest/coverage-v8` **or** use `c8`. If you choose `c8`, update `vitest.config.ts`:
+```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'c8',        // use c8 provider
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage'
+    }
+  }
+});
+```
+2. Ensure `c8` is in `devDependencies` and run tests as before:
+```bash
+npm ci
+npm run test -- --coverage
+```
+
+**Option B Run tests under c8 wrapper (alternative)**
+```json
+// package.json scripts
+"scripts": {
+  "test": "vitest run",
+  "test:coverage": "c8 --reporter=lcov --reporter=text npm run test"
+}
+```
+Then:
+```bash
+npm run test:coverage
+```
+
+**Professional note**  
+Pick one approach and keep it consistent. If CI uses `npm ci`, commit `package-lock.json` after installing `c8`.
+
+---
+
+### Execute the smoke script locally and in CI
+
+**Make the script executable**
+```bash
+chmod +x scripts/smoke-check.sh
+```
+
+**Run locally against a URL**
+```bash
+./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
+```
+
+**Add a convenience npm script**
+```json
+"scripts": {
+  "smoke": "bash ./scripts/smoke-check.sh"
+}
+```
+Then run:
+```bash
+npm run smoke -- "https://your-preview-url/"
+```
+
+**Use in CI**  
+You already call the script in the workflow. Ensure `scripts/smoke-check.sh` is executable in the repo and that the URL passed is reachable from the runner. The script exits non‑zero on failure so CI will mark the job failed.
+
+**Professional note**  
+Keep smoke checks small and deterministic (status 200, key page content or health endpoint). Avoid long, flaky end‑to‑end checks inside this script.
+
+---
+
+### Serve BUILD_INFO and how static hosting works
+
+**How BUILD_INFO is produced**  
+Your CI writes `dist/BUILD_INFO` into the built artifact. When you deploy `dist` to GitHub Pages or any static host, `/BUILD_INFO` will be served as a plain text file at the site root.
+
+**Verify locally**
+After `npm run build` and copying `dist` to a local static server, confirm:
+```bash
+curl -s https://localhost:5000/BUILD_INFO
+# or
+cat dist/BUILD_INFO
+```
+
+**If your hosting strips unknown files**  
+Make sure the static host serves files in `dist` as-is. For GitHub Pages this works by default.
+
+---
+
+### BUILD_INFO consumer examples
+
+Below are two safe, professional ways to surface build metadata.
+
+#### React footer component that fetches BUILD_INFO
+Create `src/components/BuildInfo.tsx`:
+
+```tsx
+import React, { useEffect, useState } from 'react';
+
+type BuildInfo = {
+  COMMIT?: string;
+  BRANCH?: string;
+  RUN_ID?: string;
+  BUILT_AT?: string;
+};
+
+export default function BuildInfo() {
+  const [info, setInfo] = useState<BuildInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Only fetch in non-blocking way and only when enabled
+    if (process.env.REACT_APP_SHOW_BUILD_INFO !== 'true') return;
+
+    fetch('/BUILD_INFO', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        const obj: BuildInfo = {};
+        text.split('\n').forEach((line) => {
+          const [k, ...rest] = line.split('=');
+          if (k) obj[k.trim() as keyof BuildInfo] = rest.join('=').trim();
+        });
+        setInfo(obj);
+      })
+      .catch((err) => {
+        setError(String(err));
+      });
+  }, []);
+
+  if (process.env.REACT_APP_SHOW_BUILD_INFO !== 'true') return null;
+
+  return (
+    <div style={{ fontSize: 12, opacity: 0.8 }}>
+      {error && <span>Build info unavailable</span>}
+      {info && (
+        <span>
+          <strong>Commit</strong>: {info.COMMIT?.slice(0, 8) || 'n/a'} &nbsp;|&nbsp;
+          <strong>Branch</strong>: {info.BRANCH || 'n/a'} &nbsp;|&nbsp;
+          <strong>Built</strong>: {info.BUILT_AT || 'n/a'}
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+**Usage**  
+- Add `<BuildInfo />` to a footer or an admin page.  
+- Enable only for admins or staging by setting `REACT_APP_SHOW_BUILD_INFO=true` in the environment used to build the preview or staging site.
+
+**Security note**  
+Only expose non-sensitive metadata. Do not include secrets, environment variables, or internal URLs in `BUILD_INFO`.
+
+---
+
+#### Express admin route to serve BUILD_INFO as JSON
+If you have a small server or admin API, add a route that reads the file and returns JSON.
+
+```js
+// server/routes/buildInfo.js
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const router = express.Router();
+
+router.get('/api/build-info', (req, res) => {
+  const file = path.join(__dirname, '..', 'public', 'BUILD_INFO'); // adjust path
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'not found' });
+
+  const text = fs.readFileSync(file, 'utf8');
+  const obj = {};
+  text.split('\n').forEach((line) => {
+    const [k, ...rest] = line.split('=');
+    if (k) obj[k.trim()] = rest.join('=').trim();
+  });
+
+  // Optionally restrict to authenticated admin users
+  // if (!req.user || !req.user.isAdmin) return res.status(403).end();
+
+  res.json(obj);
+});
+
+module.exports = router;
+```
+
+**Client fetch example**
+```js
+fetch('/api/build-info')
+  .then(r => r.json())
+  .then(info => console.log(info));
+```
+
+**Professional note**  
+If you expose this via an API, protect the endpoint (authentication or only on internal networks) if you include more than public metadata.
+
+---
+
+### Quick checklist to implement now
+
+1. Install `c8` and commit `package-lock.json`.  
+   ```bash
+   npm install --save-dev c8
+   git add package-lock.json
+   git commit -m "chore: add c8 for coverage"
+   ```
+2. Make the smoke script executable and test locally.  
+   ```bash
+   chmod +x scripts/smoke-check.sh
+   ./scripts/smoke-check.sh "https://your-local-preview/"
+   ```
+3. Add the React `BuildInfo` component and enable it only for staging or admin builds by setting `REACT_APP_SHOW_BUILD_INFO=true` in the preview/staging build pipeline.  
+4. Verify `/BUILD_INFO` is present in `dist` after CI build and that the static host serves it.
+
+---
+//////////////////////////Finally//////////////////
+Below is a complete, professional set of **commands, code snippets, and CI changes** to (1) install and use **c8** for coverage, (2) run the **smoke-check** script locally and in CI, and (3) add a safe **BUILD_INFO consumer** (React footer component and optional Express admin route). Follow the steps in order; each section is self-contained so you can apply pieces independently.
+
+---
+
+## 1. Install `c8` and wire coverage
+
+**Install locally and commit lockfile**
+```bash
+npm install --save-dev c8
+git add package-lock.json
+git commit -m "chore: add c8 for coverage"
+```
+
+**Option A — Use c8 as Vitest provider (recommended)**
+- `vitest.config.ts`
+```ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'c8',            // use c8 provider
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage'
+    }
+  }
+});
+```
+- Run coverage
+```bash
+npm ci
+npm run test -- --coverage
+```
+
+**Option B — Wrap tests with c8 (alternative)**
+- `package.json` scripts
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "c8 --reporter=lcov --reporter=text npm run test"
+  }
+}
+```
+- Run
+```bash
+npm run test:coverage
+```
+
+**Professional note**  
+Pick one approach and keep it consistent across local and CI. Commit `package-lock.json` so `npm ci` in CI reproduces the same tree.
+
+---
+
+## 2. Make `scripts/smoke-check.sh` executable and run it
+
+**Ensure script exists at `scripts/smoke-check.sh`**
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+URL="${1:-}"
+if [ -z "$URL" ]; then
+  echo "Usage: $0 <url>"
+  exit 2
+fi
+
+echo "Running smoke checks against: $URL"
+
+check() {
+  local path="$1"
+  local full="${URL%/}${path}"
+  echo "Checking ${full}"
+  status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$full" || echo "000")
+  if [ "$status" != "200" ]; then
+    echo "Smoke check failed for ${full} (status: $status)"
+    exit 1
+  fi
+}
+
+# Root path check; add other critical endpoints as needed
+check "/"
+
+echo "Smoke checks passed."
+```
+
+**Make executable**
+```bash
+chmod +x scripts/smoke-check.sh
+git add scripts/smoke-check.sh
+git commit -m "chore: add smoke-check script and make executable"
+```
+
+**Run locally**
+```bash
+./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
+```
+
+**Add npm convenience script**
+```json
+"scripts": {
+  "smoke": "bash ./scripts/smoke-check.sh"
+}
+```
+Run with:
+```bash
+npm run smoke -- "https://your-preview-url/"
+```
+
+**Professional note**  
+Keep smoke checks minimal and deterministic to avoid flakiness. Use health endpoints when available.
+
+---
+
+## 3. Add BUILD_INFO to the built artifact (CI already writes it)
+
+Your CI build step already writes `dist/BUILD_INFO`. Confirm by running `npm run build` locally and checking `dist/BUILD_INFO`:
+```bash
+npm run build
+cat dist/BUILD_INFO
+# Expected lines: COMMIT=..., BRANCH=..., RUN_ID=..., BUILT_AT=...
+```
+
+If you need a local build metadata step, add to `package.json`:
+```json
+"scripts": {
+  "build": "vite build && node ./scripts/write-build-info.js"
+}
+```
+`./scripts/write-build-info.js` example:
+```js
+const fs = require('fs');
+const path = require('path');
+
+const out = [
+  `COMMIT=${process.env.GITHUB_SHA || 'local'}`,
+  `BRANCH=${process.env.GITHUB_REF || 'local'}`,
+  `RUN_ID=${process.env.GITHUB_RUN_ID || 'local'}`,
+  `BUILT_AT=${new Date().toISOString()}`
+].join('\n');
+
+fs.mkdirSync(path.join(__dirname, '..', 'dist'), { recursive: true });
+fs.writeFileSync(path.join(__dirname, '..', 'dist', 'BUILD_INFO'), out);
+console.log('Wrote dist/BUILD_INFO');
+```
+
+---
+
+## 4. BUILD_INFO consumer — React footer component
+
+Add a small, opt-in component that fetches `/BUILD_INFO` and displays commit, branch, and build time. Only enable it for staging or admin builds via an environment flag.
+
+**File** `src/components/BuildInfo.tsx`
+```tsx
+import React, { useEffect, useState } from 'react';
+
+type BuildInfo = {
+  COMMIT?: string;
+  BRANCH?: string;
+  RUN_ID?: string;
+  BUILT_AT?: string;
+};
+
+export default function BuildInfo() {
+  const [info, setInfo] = useState<BuildInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Only fetch when explicitly enabled via env var to avoid exposing metadata in public builds
+  if (process.env.REACT_APP_SHOW_BUILD_INFO !== 'true') return null;
+
+  useEffect(() => {
+    fetch('/BUILD_INFO', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        const obj: BuildInfo = {};
+        text.split('\n').forEach((line) => {
+          const [k, ...rest] = line.split('=');
+          if (k) obj[k.trim() as keyof BuildInfo] = rest.join('=').trim();
+        });
+        setInfo(obj);
+      })
+      .catch((err) => {
+        setError(String(err));
+      });
+  }, []);
+
+  if (error) return <div style={{ fontSize: 12, opacity: 0.8 }}>Build info unavailable</div>;
+  if (!info) return null;
+
+  return (
+    <div style={{ fontSize: 12, opacity: 0.8 }}>
+      <strong>Commit</strong>: {info.COMMIT?.slice(0, 8) || 'n/a'} &nbsp;|&nbsp;
+      <strong>Branch</strong>: {info.BRANCH || 'n/a'} &nbsp;|&nbsp;
+      <strong>Built</strong>: {info.BUILT_AT || 'n/a'}
+    </div>
+  );
+}
+```
+
+**Usage**
+- Import and place in your footer or admin page:
+```tsx
+import BuildInfo from './components/BuildInfo';
+
+function Footer() {
+  return (
+    <footer>
+      <BuildInfo />
+    </footer>
+  );
+}
+```
+
+**Enable only for previews/staging**
+- For GitHub Actions PR preview job, set env var when building:
+```yaml
+- name: Build project
+  env:
+    REACT_APP_SHOW_BUILD_INFO: "true"
+  run: npm run build
+```
+- For production builds, leave the flag unset or set to `"false"`.
+
+**Professional note**  
+Expose only non-sensitive metadata. Do not include secrets or internal endpoints.
+
+---
+
+## 5. Optional: Express admin route to serve BUILD_INFO as JSON
+
+If you have a server, add a protected admin endpoint that returns parsed BUILD_INFO.
+
+**File** `server/routes/buildInfo.js`
+```js
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const router = express.Router();
+
+router.get('/api/build-info', (req, res) => {
+  // Optionally require authentication here
+  // if (!req.user || !req.user.isAdmin) return res.status(403).json({ error: 'forbidden' });
+
+  const file = path.join(__dirname, '..', 'public', 'BUILD_INFO'); // adjust path as needed
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'not found' });
+
+  const text = fs.readFileSync(file, 'utf8');
+  const obj = {};
+  text.split('\n').forEach((line) => {
+    const [k, ...rest] = line.split('=');
+    if (k) obj[k.trim()] = rest.join('=').trim();
+  });
+
+  res.json(obj);
+});
+
+module.exports = router;
+```
+
+**Client fetch example**
+```js
+fetch('/api/build-info')
+  .then(r => r.json())
+  .then(info => console.log(info));
+```
+
+**Professional note**  
+Protect this endpoint if it returns more than public metadata.
+
+---
+
+## 6. CI changes to enable BuildInfo in previews
+
+In your workflow `build` or `deploy-pr` job, set the env var before `npm run build` so the preview build includes the component output:
+
+```yaml
+- name: Build project (preview)
+  env:
+    REACT_APP_SHOW_BUILD_INFO: "true"
+  run: npm run build
+```
+
+For production deploys, do not set `REACT_APP_SHOW_BUILD_INFO` or set it to `"false"`.
+
+---
+
+## 7. Commit, push, and open PR
+
+Suggested commands to bundle changes and open a PR:
+```bash
+git checkout -b feat/ci-buildinfo-smoke-c8
+# add files: scripts/smoke-check.sh, src/components/BuildInfo.tsx, vitest.config.ts or package.json changes
+git add .
+git commit -m "feat(ci): add c8 coverage, smoke-check script, and BUILD_INFO consumer"
+git push --set-upstream origin feat/ci-buildinfo-smoke-c8
+# Open a PR on GitHub from this branch
+```
+
+---
+
+## 8. Quick verification checklist
+
+- `npm ci` completes and `package-lock.json` is committed.  
+- `npm run test -- --coverage` or `npm run test:coverage` produces coverage output.  
+- `npm run build` produces `dist/BUILD_INFO`.  
+- `./scripts/smoke-check.sh <url>` returns success for the preview URL.  
+- PR preview shows the BuildInfo footer when `REACT_APP_SHOW_BUILD_INFO=true` is set.
+
+---
+////////////////////////////END///////////////////////

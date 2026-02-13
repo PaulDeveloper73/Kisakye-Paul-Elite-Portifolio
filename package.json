@@ -14,7 +14,10 @@
     "format:fix": "prettier --write 'src/**/*.{ts,tsx,js,jsx,css}'",
     "test": "vitest run",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "smoke": "bash ./scripts/smoke-check.sh",
+    "test:coverage": "c8 --reporter=lcov --reporter=text npm run test",
+    "ci:check": "npm run lint && npm run format:check && npx tsc --noEmit && npm run test -- --coverage"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -36,6 +39,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
+    "c8": "^7.14.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
