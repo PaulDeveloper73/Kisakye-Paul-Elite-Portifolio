@@ -17,14 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # Checkout repository so subsequent steps can access source files and config.
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+        # Set Node.js version to match local development and enable npm caching for faster runs.
 
       - name: Install dependencies
         run: npm ci
+        # Use npm ci for reproducible installs in CI (reads package-lock.json).
 
       - name: Show environment and files
         run: |
@@ -35,12 +38,15 @@ jobs:
           sed -n '1,200p' package.json
           echo "---- eslint.config.js (first 200 lines) ----"
           test -f eslint.config.js && sed -n '1,200p' eslint.config.js || echo "eslint.config.js missing"
+        # Diagnostic output to help debug CI failures quickly (versions and key config files).
 
       - name: Run ESLint and save reports
         run: |
+          # Produce both machine-friendly and human-friendly reports.
           npx eslint src --ext .ts,.tsx -f unix > eslint-report-unix.txt || true
           npx eslint src --ext .ts,.tsx -f stylish > eslint-report-stylish.txt || true
           echo "Saved reports"
+          # Fail the job if any ESLint errors are present (keeps CI strict about code quality).
           if grep -E "error" eslint-report-unix.txt >/dev/null; then
             echo "ESLint found errors — failing job."
             exit 1
@@ -53,9 +59,11 @@ jobs:
           path: |
             eslint-report-unix.txt
             eslint-report-stylish.txt
+        # Upload reports as artifacts so maintainers can download and inspect failures.
 
       - name: Run Prettier Check
         run: npm run format:check
+        # Ensure code style consistency; CI will fail if files are not formatted.
 
   type-check:
     name: TypeScript Check
@@ -63,6 +71,7 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
+        # Fresh checkout for isolated job environment.
 
       - uses: actions/setup-node@v4
         with:
@@ -70,9 +79,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+        # Install dependencies before running type checks.
 
       - name: TypeScript Type Check
         run: npx tsc --noEmit
+        # Run TypeScript compiler in type-check-only mode to catch type errors early.
 
   test:
     name: Run Tests & Coverage
@@ -90,12 +101,14 @@ jobs:
 
       - name: Run Vitest Tests
         run: npm run test -- --coverage
+        # Execute unit tests and collect coverage; ensure coverage provider dependency is installed.
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage
+        # Persist coverage artifacts for later inspection or CI dashboards.
 
   build-pr-preview:
     name: Build & Deploy PR Preview
@@ -112,9 +125,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        # Install dependencies in the PR environment.
 
       - name: Build Project
         run: npm run build
+        # Build the production artifact (Vite outputs to ./dist by default).
 
       - name: Deploy PR Preview
         uses: peaceiris/actions-gh-pages@v4
@@ -125,6 +140,7 @@ jobs:
           destination_dir: pr-${{ github.event.pull_request.number }}
           user_name: "GitHub Actions"
           user_email: "actions@github.com"
+        # Publish a preview build to a subdirectory on gh-pages for quick review.
 
       - name: Comment PR with Preview URL
         uses: peter-evans/create-or-update-comment@v4
@@ -134,6 +150,7 @@ jobs:
           body: |
             🚀 **PR Preview Available**
             https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/
+        # Post a comment on the PR with a direct link to the preview site for reviewers.
 
   build-and-deploy:
     name: Build & Deploy Production
@@ -150,9 +167,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        # Use npm ci to ensure deterministic installs for production build.
 
       - name: Build Project
         run: npm run build
+        # Build production assets; ensure Vite base is configured if serving from a subpath.
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -162,3 +181,4 @@ jobs:
           publish_branch: gh-pages
           user_name: "GitHub Actions"
           user_email: "actions@github.com"
+        # Deploy the built site to the gh-pages branch for production hosting.

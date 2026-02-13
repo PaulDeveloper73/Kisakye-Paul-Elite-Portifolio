@@ -87,8 +87,8 @@ A results‑driven full‑stack and mobile developer who builds **scalable, secu
 
 Ready to build a product that scales and delights users? I’m available for freelance, contract, and full‑time opportunities.
 
-- **Email:** kisakye.paul@example.com  
-- **Phone / WhatsApp:** +256‑XXX‑XXX‑XXX  
+- **Email:** kisakyepaul73@gmail.com  
+- **Phone / WhatsApp:** +256‑774‑185‑964  
 - **Portfolio:** https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/
 
 ---
