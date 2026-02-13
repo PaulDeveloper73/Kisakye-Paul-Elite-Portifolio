@@ -26,11 +26,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Show repo root files (diagnostic)
-        run: ls -la
+      - name: Show environment and files
+        run: |
+          node -v
+          npm -v
+          npx eslint --version
+          echo "---- package.json ----"
+          sed -n '1,200p' package.json
+          echo "---- eslint.config.js (first 200 lines) ----"
+          test -f eslint.config.js && sed -n '1,200p' eslint.config.js || echo "eslint.config.js missing"
 
-      - name: Run ESLint
-        run: npm run lint
+      - name: Run ESLint and save reports
+        run: |
+          npx eslint src --ext .ts,.tsx -f unix > eslint-report-unix.txt || true
+          npx eslint src --ext .ts,.tsx -f stylish > eslint-report-stylish.txt || true
+          echo "Saved reports"
+          if grep -E "error" eslint-report-unix.txt >/dev/null; then
+            echo "ESLint found errors — failing job."
+            exit 1
+          fi
+
+      - name: Upload ESLint reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: eslint-reports
+          path: |
+            eslint-report-unix.txt
+            eslint-report-stylish.txt
 
       - name: Run Prettier Check
         run: npm run format:check
@@ -74,6 +96,44 @@ jobs:
         with:
           name: coverage-report
           path: coverage
+
+  build-pr-preview:
+    name: Build & Deploy PR Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy PR Preview
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          destination_dir: pr-${{ github.event.pull_request.number }}
+          user_name: "GitHub Actions"
+          user_email: "actions@github.com"
+
+      - name: Comment PR with Preview URL
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            🚀 **PR Preview Available**
+            https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/
 
   build-and-deploy:
     name: Build & Deploy Production

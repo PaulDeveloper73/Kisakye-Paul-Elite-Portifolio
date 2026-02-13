@@ -9,18 +9,15 @@ import { FlatCompat } from "@eslint/eslintrc";
 const compat = new FlatCompat();
 
 export default [
-  // ESLint built-in recommended (flat)
   js.configs.recommended,
 
-  // Load legacy/shareable configs (converted by FlatCompat).
-  // Do NOT include "eslint:recommended" here; it's already added above.
+  // Convert legacy shareable configs (exclude eslint:recommended here)
   ...compat.extends(
     "plugin:react/recommended",
     "plugin:@typescript-eslint/recommended",
     "prettier"
   ),
 
-  // Project-specific config comes last so its rules override the shareable configs.
   {
     files: ["**/*.{ts,tsx}"],
     ignores: ["node_modules", "dist"],
@@ -31,7 +28,7 @@ export default [
         ecmaVersion: 2021,
         sourceType: "module",
         ecmaFeatures: { jsx: true },
-        jsxRuntime: "automatic" // use new JSX transform (no React in scope required)
+        jsxRuntime: "automatic"
       },
       globals: {
         window: "readonly",
@@ -46,10 +43,7 @@ export default [
     },
 
     rules: {
-      // Turn off the rule that requires React to be in scope when using JSX
       "react/react-in-jsx-scope": "off"
-
-      // Add any other project-specific overrides here
     },
 
     settings: {
@@ -57,6 +51,5 @@ export default [
     }
   },
 
-  // Ensure prettier rules are applied last (optional but common)
   prettier
 ];
