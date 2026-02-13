@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest run"
+   "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview",
+  "lint": "eslint src --ext .ts,.tsx",
+  "format:check": "prettier --check 'src/**/*.{ts,tsx,js,jsx,css}'",
+  "test": "vitest run"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",

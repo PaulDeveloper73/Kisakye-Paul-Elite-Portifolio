@@ -1,73 +1,122 @@
-# React + TypeScript + Vite
+# 🌟 Kisakye Paul – Elite Software Developer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to my professional portfolio! I am **Kisakye Paul**, a passionate full-stack web and mobile application developer with expertise in building **custom systems, web apps, mobile apps, and enterprise solutions**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 💼 What I Do
 
-## React Compiler
+I specialize in creating high-quality software solutions that are:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Scalable** – built to handle growth and complexity  
+- **Reliable** – thoroughly tested and production-ready  
+- **Custom** – tailored to your unique business requirements  
+- **Modern UI/UX** – intuitive and user-friendly designs  
 
-## Expanding the ESLint configuration
+Whether you need a **web application**, **mobile app**, or **custom enterprise system**, I can help bring your ideas to life with **React, React Native, TypeScript, Vite, TailwindCSS, and more**.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 Portfolio Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Web & Mobile Apps:** Dynamic, responsive, and production-ready  
+- **Custom Systems:** Tailored solutions for businesses and organizations  
+- **Real-Time Functionality:** Chat, notifications, and interactive dashboards  
+- **E-commerce Solutions:** Product & service platforms, booking systems  
+- **Telehealth / Mental Health Platforms:** Scalable and secure solutions  
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+You can explore my portfolio live here:  
+[🌐 Live Portfolio](https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📌 Pull Request Previews (For Collaborators)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Every pull request automatically generates a **live preview** hosted on GitHub Pages. Reviewers can see your changes in action before merging:
+
+https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-
+<PR_NUMBER>/
+
+This ensures all updates are **tested and visually verified** before hitting production.
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend:** React.js, React Native, TailwindCSS, Vite, TypeScript  
+- **Backend / APIs:** Node.js, Express, Convex, Firebase (optional)  
+- **Testing:** Vitest, Jest, TypeScript type checks  
+- **Deployment:** GitHub Pages, Vercel, Netlify  
+
+---
+
+## 📂 Projects Showcase
+
+Here are some of my **key projects**:
+
+### 1. Bridal & Groom Hub
+**Description:** Full-stack wedding e-commerce platform with vendor booking, real-time chat, and payment integration.  
+**Tech:** React.js, Convex, TailwindCSS, TypeScript  
+**Live Demo:** [Visit Site](https://pauldeveloper73.github.io/bridal-groom-hub/)  
+**Screenshot:**  
+![Bridal & Groom Hub](https://via.placeholder.com/600x400?text=Bridal+%26+Groom+Hub)
+
+---
+
+### 2. Kampala Mental Health Enthusiasts Initiative
+**Description:** Telehealth and mental health support system for local communities, schools, and clinics.  
+**Tech:** React.js, Node.js, TailwindCSS, TypeScript  
+**Live Demo:** [Visit Site](https://pauldeveloper73.github.io/kmhe-initiative/)  
+**Screenshot:**  
+![KMHE Initiative](https://via.placeholder.com/600x400?text=KMHE+Initiative)
+
+---
+
+### 3. ServiceFlow Pro
+**Description:** Enterprise service management dashboard with reporting, analytics, and CSV/PDF export.  
+**Tech:** React.js, TypeScript, TailwindCSS, Vite  
+**Live Demo:** [Visit Site](https://pauldeveloper73.github.io/serviceflow-pro/)  
+**Screenshot:**  
+![ServiceFlow Pro](https://via.placeholder.com/600x400?text=ServiceFlow+Pro)
+
+---
+
+### 4. Custom Mobile/Web Apps
+**Description:** I also develop **custom web/mobile solutions** for clients, including e-commerce, booking systems, real-time chat, and dashboard apps.  
+**Tech:** React Native, React.js, Node.js, TailwindCSS, TypeScript  
+**Live Demo:** Available on request  
+
+---
+
+## 📈 Why Work With Me
+
+- I turn your ideas into **real, fully functional systems**  
+- I follow **best practices**, clean code, and modern architecture  
+- I deliver **production-ready solutions** fast without compromising quality  
+- I communicate clearly and collaborate seamlessly  
+
+---
+
+## 💌 Hire Me
+
+Looking for a **custom web or mobile app**, **enterprise system**, or **any software project**? Let’s make it happen!  
+
+**Contact Me:**
+
+- 📧 Email: kisakye.paul@example.com  
+- 📞 Phone/WhatsApp: +256-XXX-XXX-XXX  
+- 🌐 Portfolio: [Kisakye Paul – Portfolio](https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/)
+
+I am ready to bring your project ideas to life with **top-notch development, speed, and reliability**.
+
+---
+
+## ⚡ Notes for Reviewers & Clients
+
+- PR Previews allow you to see every change **live** before merge.  
+- Production site always reflects the **latest tested build**.  
+- My portfolio is **fully responsive**, works on web and mobile, and uses modern web standards.
+
+---
+
+**Let’s build something amazing together! 🚀**

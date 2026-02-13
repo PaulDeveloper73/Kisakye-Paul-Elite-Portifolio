@@ -4,10 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   base: "/Kisakye-Paul-Elite-Portifolio/",
-  plugins: [
-    react(),
-    tailwindcss()
-  ],
+  plugins: [react(), tailwindcss()],
   test: {
     globals: true,
     environment: "jsdom",

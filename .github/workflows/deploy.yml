@@ -1,7 +1,10 @@
-name: Test and Deploy Portfolio
+name: Enterprise CI/CD Portfolio
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -9,24 +12,132 @@ permissions:
   contents: write
 
 jobs:
-  test-build-deploy:
+  # --------------------------
+  # Lint + Prettier
+  # --------------------------
+  lint:
+    name: Lint & Prettier
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - run: npm install
 
-      - name: Run Tests
-        run: npm run test
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier Check
+        run: npm run format:check
+
+  # --------------------------
+  # TypeScript check
+  # --------------------------
+  type-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+
+      - name: TypeScript Type Check
+        run: tsc --noEmit
+
+  # --------------------------
+  # Run Tests + Code Coverage
+  # --------------------------
+  test:
+    name: Run Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: type-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+
+      - name: Run Vitest Tests
+        run: npm run test -- --coverage
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage
+
+  # --------------------------
+  # PR Preview Deployment + Comment
+  # --------------------------
+  build-pr-preview:
+    name: Build & Deploy PR Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy PR Preview
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          destination_dir: pr-${{ github.event.pull_request.number }}
+          user_name: "GitHub Actions"
+          user_email: "actions@github.com"
+
+      - name: Comment PR with Preview URL
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            🚀 **PR Preview Available**
+            Click here to see a live preview of this pull request:  
+            [View PR Preview](https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/)
+
+  # --------------------------
+  # Production Deployment
+  # --------------------------
+  build-and-deploy:
+    name: Build & Deploy Production
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
 
       - name: Build Project
         run: npm run build
