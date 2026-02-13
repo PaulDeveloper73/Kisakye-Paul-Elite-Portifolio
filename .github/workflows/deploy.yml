@@ -119,7 +119,7 @@ jobs:
 
       - name: Run tests and coverage
         run: npm run test -- --coverage
-        # Ensure coverage provider (e.g., @vitest/coverage-v8) is installed in devDependencies.
+        # Ensure coverage provider (e.g., c8) is installed in devDependencies.
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -153,8 +153,8 @@ jobs:
         run: npm ci
 
       - name: Build project
-        run: npm run build
         # Build production assets (Vite outputs to ./dist by default).
+        run: npm run build
 
       - name: Write build metadata
         run: |
@@ -187,6 +187,18 @@ jobs:
           name: dist
           path: ./dist
         # Use the same artifact produced by the build job.
+
+      - name: Build project for preview (enable BUILD_INFO consumer)
+        # Set the env var so the BuildInfo component is included in preview builds only.
+        env:
+          REACT_APP_SHOW_BUILD_INFO: "true"
+        run: npm run build
+        # Rebuild here only if your preview pipeline requires a rebuild with env-specific flags.
+        # If your build artifacts are already environment-agnostic, you can skip this step.
+
+      - name: Ensure smoke script is executable
+        run: chmod +x ./scripts/smoke-check.sh
+        # Defensive step: ensure the script has execute permissions on the runner.
 
       - name: Deploy PR preview to gh-pages
         uses: peaceiris/actions-gh-pages@v4
@@ -224,6 +236,10 @@ jobs:
         with:
           name: dist
           path: ./dist
+
+      - name: Ensure smoke script is executable
+        run: chmod +x ./scripts/smoke-check.sh
+        # Defensive step: ensure the script has execute permissions on the runner.
 
       - name: Run pre-deploy smoke checks
         run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
