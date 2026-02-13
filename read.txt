@@ -932,4 +932,303 @@ git push --set-upstream origin feat/ci-buildinfo-smoke-c8
 - PR preview shows the BuildInfo footer when `REACT_APP_SHOW_BUILD_INFO=true` is set.
 
 ---
+
+//////////////////////
+### Summary
+I prepared a ready‑to‑apply patch that adds Dependabot, an auto‑merge workflow for Dependabot PRs, the smoke script, a BUILD_INFO consumer component, and the `c8` coverage setup. Below are the exact files to add, their contents, and the **git** commands to create a branch, commit, and open a PR.
+
+---
+
+### Files to add or update
+
+#### `.github/dependabot.yml`
+```yaml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    versioning-strategy: "increase"
+    labels:
+      - "dependencies"
+      - "automated"
+    ignore:
+      - dependency-name: "large-ui-lib"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "some-optional-package"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "actions"
+```
+
+---
+
+#### `.github/workflows/auto-merge-dependabot.yml`
+```yaml
+name: Auto-merge Dependabot updates
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, synchronize]
+
+jobs:
+  enable-auto-merge:
+    name: Enable auto-merge for Dependabot PRs
+    runs-on: ubuntu-latest
+    if: >
+      github.actor == 'dependabot[bot]' ||
+      startsWith(github.actor, 'dependabot-preview[bot]') ||
+      contains(github.event.pull_request.user.login, 'dependabot')
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Add automerge labels
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: automerge,dependencies
+
+      - name: Enable GitHub auto-merge on the PR
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
+```
+
+---
+
+#### `scripts/smoke-check.sh`
+```bash
+#!/usr/bin/env bash
+# Lightweight smoke checks used by CI after deploys.
+# Exits non-zero on failure so CI can mark the deploy as failed.
+
+set -euo pipefail
+
+URL="${1:-}"
+if [ -z "$URL" ]; then
+  echo "Usage: $0 <url>"
+  exit 2
+fi
+
+echo "Running smoke checks against: $URL"
+
+check() {
+  local path="$1"
+  local full="${URL%/}${path}"
+  echo "Checking ${full}"
+  status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$full" || echo "000")
+  if [ "$status" != "200" ]; then
+    echo "Smoke check failed for ${full} (status: $status)"
+    exit 1
+  fi
+}
+
+# Root path check; add other critical endpoints as needed
+check "/"
+
+echo "Smoke checks passed."
+```
+
+**Make executable after adding**
+```bash
+chmod +x scripts/smoke-check.sh
+```
+
+---
+
+#### `src/components/BuildInfo.tsx`
+```tsx
+import React, { useEffect, useState } from 'react';
+
+type BuildInfo = {
+  COMMIT?: string;
+  BRANCH?: string;
+  RUN_ID?: string;
+  BUILT_AT?: string;
+};
+
+export default function BuildInfo() {
+  const [info, setInfo] = useState<BuildInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Only render when explicitly enabled at build time
+  if (process.env.REACT_APP_SHOW_BUILD_INFO !== 'true') return null;
+
+  useEffect(() => {
+    fetch('/BUILD_INFO', { cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((text) => {
+        const obj: BuildInfo = {};
+        text.split('\n').forEach((line) => {
+          const [k, ...rest] = line.split('=');
+          if (k) obj[k.trim() as keyof BuildInfo] = rest.join('=').trim();
+        });
+        setInfo(obj);
+      })
+      .catch((err) => {
+        setError(String(err));
+      });
+  }, []);
+
+  if (error) return <div style={{ fontSize: 12, opacity: 0.8 }}>Build info unavailable</div>;
+  if (!info) return null;
+
+  return (
+    <div style={{ fontSize: 12, opacity: 0.8 }}>
+      <strong>Commit</strong>: {info.COMMIT?.slice(0, 8) || 'n/a'} &nbsp;|&nbsp;
+      <strong>Branch</strong>: {info.BRANCH || 'n/a'} &nbsp;|&nbsp;
+      <strong>Built</strong>: {info.BUILT_AT || 'n/a'}
+    </div>
+  );
+}
+```
+
+**Usage**  
+Import and place `<BuildInfo />` in your footer or admin page. Enable only for previews/staging by setting `REACT_APP_SHOW_BUILD_INFO=true` in the CI build step for PR previews.
+
+---
+
+#### `vitest.config.ts` (coverage provider c8)
+```ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'c8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: 'coverage'
+    }
+  }
+});
+```
+
+---
+
+#### `package.json` changes (devDependencies and scripts)
+Add or merge these entries into your existing `package.json`:
+
+```json
+{
+  "devDependencies": {
+    "c8": "^7.0.0",
+    "vitest": "^1.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "c8 --reporter=lcov --reporter=text npm run test",
+    "smoke": "bash ./scripts/smoke-check.sh",
+    "ci:check": "npm run lint && npm run format:check && npx tsc --noEmit && npm run test:coverage"
+  }
+}
+```
+
+**Professional note**  
+Run `npm install --save-dev c8 vitest` locally and commit the resulting `package-lock.json` so CI uses the same dependency tree.
+
+---
+
+### Git commands to create branch, add files, and open a PR
+Run these commands from your repo root. Replace `your-github-username` and `origin` if needed.
+
+```bash
+# 1. Create feature branch
+git checkout -b feat/dependabot-automerge-buildinfo-smoke-c8
+
+# 2. Add files (example: create files with your editor or use here-docs)
+# Create directories
+mkdir -p .github/workflows scripts src/components
+
+# Add files (example using cat >> file)
+# Paste the contents provided above into each file, or use the patch provided separately.
+
+# 3. Make smoke script executable
+chmod +x scripts/smoke-check.sh
+
+# 4. Install dev dependencies locally and update lockfile
+npm install --save-dev c8 vitest
+git add package-lock.json package.json
+
+# 5. Stage all new files and changes
+git add .github/dependabot.yml .github/workflows/auto-merge-dependabot.yml \
+        scripts/smoke-check.sh src/components/BuildInfo.tsx vitest.config.ts
+
+# 6. Commit
+git commit -m "chore(ci): add Dependabot config, auto-merge workflow, smoke-check, BUILD_INFO consumer, and c8 coverage"
+
+# 7. Push branch
+git push --set-upstream origin feat/dependabot-automerge-buildinfo-smoke-c8
+
+# 8. Open a PR (option A: GitHub CLI)
+gh pr create --title "chore(ci): Dependabot auto-merge, smoke checks, BUILD_INFO, c8" \
+  --body "Adds Dependabot config, auto-merge workflow for Dependabot PRs, smoke-check script, BuildInfo component, and c8 coverage setup. See CI changes for enabling BUILD_INFO in PR previews." \
+  --base main
+
+# Option B: open PR via GitHub web UI after pushing the branch
+```
+
+---
+
+### Post-merge checklist and recommended next steps
+- **Enable branch protection** on `main` requiring the CI checks used by Dependabot PRs.  
+- **Allow auto-merge** in repository settings so the `enable-pull-request-automerge` action can set auto-merge.  
+- **Verify PR preview builds** set `REACT_APP_SHOW_BUILD_INFO=true` in the preview build step so the BuildInfo component appears only on previews.  
+- **Monitor Dependabot PRs** for the first 2–4 weeks and adjust `ignore` rules or schedule if noise is high.  
+- **Triage CodeQL and Dependabot alerts** regularly and set a remediation SLA.
+
+---
+////////////
+# 1. Create feature branch
+git checkout -b feat/dependabot-automerge-buildinfo-smoke-c8
+
+# 2. Add files (example: create files with your editor or use here-docs)
+# Create directories
+mkdir -p .github/workflows scripts src/components
+
+# Add files (example using cat >> file)
+# Paste the contents provided above into each file, or use the patch provided separately.
+
+# 3. Make smoke script executable
+chmod +x scripts/smoke-check.sh
+
+# 4. Install dev dependencies locally and update lockfile
+npm install --save-dev c8 vitest
+git add package-lock.json package.json
+
+# 5. Stage all new files and changes
+git add .github/dependabot.yml .github/workflows/auto-merge-dependabot.yml \
+        scripts/smoke-check.sh src/components/BuildInfo.tsx vitest.config.ts
+
+# 6. Commit
+git commit -m "chore(ci): add Dependabot config, auto-merge workflow, smoke-check, BUILD_INFO consumer, and c8 coverage"
+
+# 7. Push branch
+git push --set-upstream origin feat/dependabot-automerge-buildinfo-smoke-c8
+
+# 8. Open a PR (option A: GitHub CLI)
+gh pr create --title "chore(ci): Dependabot auto-merge, smoke checks, BUILD_INFO, c8" \
+  --body "Adds Dependabot config, auto-merge workflow for Dependabot PRs, smoke-check script, BuildInfo component, and c8 coverage setup. See CI changes for enabling BUILD_INFO in PR previews." \
+  --base main
+
+# Option B: open PR via GitHub web UI after pushing the branch
+
 ////////////////////////////END///////////////////////

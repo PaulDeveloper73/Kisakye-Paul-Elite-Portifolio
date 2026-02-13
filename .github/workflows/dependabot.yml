@@ -4,7 +4,29 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 5
     rebase-strategy: "auto"
+    versioning-strategy: "increase"
+    labels:
+      - "dependencies"
+      - "automated"
+    ignore:
+      - dependency-name: "large-ui-lib"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "some-optional-package"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    labels:
+      - "dependencies"
+      - "actions"
+
 
  # Professional note: tune the schedule and auto-merge policy to match your risk tolerance and test coverage.

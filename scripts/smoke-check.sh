@@ -5,6 +5,9 @@
 #Run locally against a URL
 #./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
 
+#!/usr/bin/env bash
+# Lightweight smoke checks used by CI after deploys.
+# Exits non-zero on failure so CI can mark the deploy as failed.
 
 set -euo pipefail
 
@@ -27,7 +30,7 @@ check() {
   fi
 }
 
-# Root path check; add other critical endpoints as needed (login, health, API endpoints)
+# Root path check; add other critical endpoints as needed
 check "/"
 
 echo "Smoke checks passed."
