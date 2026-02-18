@@ -8,5 +8,3 @@ Disallow: /dist/
 Disallow: /scripts/
 Disallow: /private/
 
-# Optional: point to your sitemap (create /sitemap.xml if you have one)
-Sitemap: https://PaulDeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/sitemap.xml
