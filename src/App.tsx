@@ -240,6 +240,7 @@ const App: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-4">
+            {/* <ThemeToggleButton /> */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="p-2.5 rounded-2xl glass hover:bg-accent/10 transition-all text-accent border border-accent/20"
