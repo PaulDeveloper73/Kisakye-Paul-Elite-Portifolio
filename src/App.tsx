@@ -178,8 +178,8 @@ const App: React.FC = () => {
 
   return (
     <div
-    ref={containerRef}
-    className="relative z-10 bg-bg0 text-ink selection:bg-accent selection:text-white transition-colors duration-400"
+      ref={containerRef}
+      className="relative z-10 bg-bg0 text-ink selection:bg-accent selection:text-white transition-colors duration-400"
     >
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.04] z-[100] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       <div className="gridlines fixed inset-0 pointer-events-none" aria-hidden="true" />
@@ -190,8 +190,8 @@ const App: React.FC = () => {
         style={{ width: `${scrollProgress}%` }}
       />
 
-    {/* Floating Action Buttons */}
-    <FloatingActions />
+      {/* Floating Action Buttons */}
+      <FloatingActions />
 
       {/* Header */}
       <header className="sticky top-0 z-[110] glass border-b border-accent/10 shadow-lg">
