@@ -149,7 +149,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="relative w-11 h-11 rounded-full bg-gradient-to-br from-accent via-accent2 to-accent3 p-[2px] shadow-sm group-hover:scale-105 transition-all duration-300 overflow-hidden">
                <img 
-                 src="../img/kisakye-paul-software-expert.jpg" 
+                 src={`${import.meta.env.BASE_URL}img/kisakye-paul-software-expert.jpg`}
                  alt="KP" 
                  className="w-full h-full object-cover rounded-full" 
                />
@@ -243,7 +243,7 @@ const App: React.FC = () => {
                <div className="relative glass rounded-[3rem] aspect-square p-6 border-accent/30 shadow-2xl overflow-hidden group">
                   <div className="relative w-full h-full overflow-hidden rounded-[2.5rem] bg-bg1">
                      <img 
-                       src="../img/kisakye-paul-software-expert.jpg" 
+                       src={`${import.meta.env.BASE_URL}img/kisakye-paul-software-expert.jpg`} 
                        alt="Kisakye Paul" 
                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 contrast-[1.05]"
                      />
@@ -625,7 +625,7 @@ const App: React.FC = () => {
         <div className="max-w-[1440px] mx-auto space-y-8">
           <div className="flex items-center justify-center gap-5">
              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-accent">
-                <img src="../img/kisakye-paul-software-expert.jpg" alt="KP" className="w-full h-full object-cover" />
+                <img src={`${import.meta.env.BASE_URL}img/kisakye-paul-software-expert.jpg`} alt="KP" className="w-full h-full object-cover" />
              </div>
              <div className="text-left">
                <h4 className="font-black text-3xl tracking-tighter">Kisakye Paul</h4>

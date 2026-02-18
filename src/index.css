@@ -1,1 +1,85 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+
+/* Enable class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Colors */
+  --color-bg0: var(--bg0);
+  --color-bg1: var(--bg1);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+
+  --color-accent: #8b5cf6;
+  --color-accent2: #a78bfa;
+  --color-accent3: #6366f1;
+  --color-danger: #f43f5e;
+
+  /* Fonts */
+  --font-sans: "Roboto", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  /* Radius */
+  --radius-section: 1.5rem;
+  --radius-card: 1rem;
+
+  /* Shadows */
+  --shadow-accent: 0 10px 30px -10px rgba(139, 92, 246, 0.3);
+  --shadow-accent-lg: 0 20px 50px -15px rgba(139, 92, 246, 0.4);
+}
+
+ :root {
+      --bg0: #FFFFFF;
+      --bg1: #F9FAFB;
+      --ink: #111827;
+      --muted: #6B7280;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(139, 92, 246, 0.15);
+      --grid-color-x: rgba(139, 92, 246, 0.05);
+      --grid-color-y: rgba(139, 92, 246, 0.04);
+    }
+    .dark {
+      --bg0: #0C0A1F;
+      --bg1: #0F0D29;
+      --ink: #F3F4F6;
+      --muted: #9CA3AF;
+      --glass-bg: rgba(12, 10, 31, 0.7);
+      --glass-border: rgba(139, 92, 246, 0.25);
+      --grid-color-x: rgba(139, 92, 246, 0.08);
+      --grid-color-y: rgba(139, 92, 246, 0.06);
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: 
+        radial-gradient(1200px 900px at 18% 10%, rgba(139, 92, 246, 0.08), transparent 60%),
+        radial-gradient(900px 900px at 80% 18%, rgba(99, 102, 241, 0.06), transparent 60%),
+        radial-gradient(900px 700px at 60% 85%, rgba(167, 139, 250, 0.05), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      transition: background-color 0.3s ease;
+    }
+    .gridlines {
+      background:
+        linear-gradient(to right, var(--grid-color-x) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-y) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(80% 60% at 50% 35%, #000 60%, transparent 100%);
+    }
+    .glass {
+      backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+    }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal { opacity: 0; }
+    .reveal.active { animation: fadeInUp 0.8s ease-out forwards; }
+    
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; color: black !important; }
+      .glass { border: 1px solid #ddd; background: white; backdrop-filter: none; }
+    }
