@@ -1,0 +1,118 @@
+# .htaccess - recommended for Apache-hosted single-page portfolio
+# Place this file at the webroot. Requires mod_rewrite, mod_headers, mod_expires, mod_deflate.
+
+# ------------------------------------------------------------------
+# Basic hardening
+# ------------------------------------------------------------------
+# Disable directory listings
+Options -Indexes
+
+# Deny access to sensitive files
+<FilesMatch "(\.env|\.git|composer\.json|package-lock\.json|yarn\.lock|README|LICENSE)">
+  Require all denied
+</FilesMatch>
+
+# Protect .htaccess itself
+<Files ".htaccess">
+  Require all denied
+</Files>
+
+# ------------------------------------------------------------------
+# Force HTTPS (if your host supports it)
+# ------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Redirect to HTTPS (preserve host and URI)
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# ------------------------------------------------------------------
+# SPA fallback: serve existing files, otherwise serve index.html
+# ------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # If the request is for an existing file or directory, serve it
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Otherwise rewrite to index.html (single-page app)
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# ------------------------------------------------------------------
+# Caching: set sensible cache lifetimes
+# ------------------------------------------------------------------
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # Short/no cache for HTML so updates propagate quickly
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/xhtml+xml "access plus 0 seconds"
+
+  # Long cache for static assets
+  ExpiresByType image/x-icon "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType application/font-woff2 "access plus 1 month"
+  ExpiresByType application/font-woff "access plus 1 month"
+  ExpiresByType application/vnd.ms-fontobject "access plus 1 month"
+</IfModule>
+
+# Ensure proxies and CDNs vary on encoding
+<IfModule mod_headers.c>
+  Header always append Vary Accept-Encoding
+</IfModule>
+
+# ------------------------------------------------------------------
+# Compression
+# ------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  # Compress common text-based resources
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ------------------------------------------------------------------
+# Security headers
+# ------------------------------------------------------------------
+<IfModule mod_headers.c>
+  # Prevent MIME sniffing
+  Header set X-Content-Type-Options "nosniff"
+
+  # Clickjacking protection
+  Header set X-Frame-Options "SAMEORIGIN"
+
+  # Basic XSS protection (legacy)
+  Header set X-XSS-Protection "1; mode=block"
+
+  # Referrer policy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Permissions policy (adjust features as needed)
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+  # Content Security Policy (simple baseline; adapt to your app)
+  Header set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; connect-src 'self' https:; frame-ancestors 'self'; base-uri 'self';"
+</IfModule>
+
+# ------------------------------------------------------------------
+# Disable ETag to reduce conditional requests variability
+# ------------------------------------------------------------------
+FileETag None
+
+# ------------------------------------------------------------------
+# Optional: custom error pages (create these files in your public folder)
+# ------------------------------------------------------------------
+ErrorDocument 404 /404.html
+ErrorDocument 500 /500.html

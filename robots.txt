@@ -1,0 +1,12 @@
+# Allow all crawlers to index the site
+User-agent: *
+Disallow:
+
+# Block common build or private folders (adjust to your repo)
+Disallow: /node_modules/
+Disallow: /dist/
+Disallow: /scripts/
+Disallow: /private/
+
+# Optional: point to your sitemap (create /sitemap.xml if you have one)
+Sitemap: https://PaulDeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/sitemap.xml
