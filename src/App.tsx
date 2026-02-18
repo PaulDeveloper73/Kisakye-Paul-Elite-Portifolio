@@ -190,8 +190,6 @@ const App: React.FC = () => {
         style={{ width: `${scrollProgress}%` }}
       />
 
- 
-
       {/* Header */}
       <header className="sticky top-0 z-[110] glass border-b border-accent/10 shadow-lg">
         <div className="max-w-[1440px] mx-auto px-6 md:px-12 py-4 flex items-center justify-between gap-8">
@@ -823,7 +821,7 @@ const App: React.FC = () => {
           </p>
         </div>
       </footer>
-           {/* Floating Action Buttons */}
+      {/* Floating Action Buttons */}
       <FloatingActions />
     </div>
   );
