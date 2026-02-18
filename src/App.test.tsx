@@ -5,8 +5,6 @@ import App from './App';
 describe('App Component', () => {
   it('renders portfolio name', () => {
     render(<App />);
-    expect(
-      screen.getByRole('heading', { name: /Kisakye Paul/i, level: 1 })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Kisakye Paul/i, level: 1 })).toBeInTheDocument();
   });
 });
