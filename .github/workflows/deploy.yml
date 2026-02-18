@@ -218,7 +218,10 @@ jobs:
         # Use the same artifact produced by the build job.
 
       - name: Inspect downloaded artifact
-        run: ls -la ./dist
+        run: |
+          echo "artifact listing:"
+          ls -la ./dist
+          test -f ./dist/index.html || (echo "MISSING ./dist/index.html — check build output" && exit 1)
         # Confirm artifact contents before publishing.
 
       - name: Ensure smoke script is executable
@@ -235,17 +238,17 @@ jobs:
         # Publish a preview build to a PR-specific path for reviewers.
 
       - name: Run post-deploy smoke checks
-        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/pr-${{ github.event.pull_request.number }}/"
+        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/" "" 5 2
         env:
           CI: true
-        # Run lightweight checks to ensure the preview is healthy.
+        # Run lightweight checks to ensure the preview is healthy (SPA mode).
 
       - name: Comment PR with preview URL
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
-          body: "PR preview: https://${{ github.repository_owner }}.github.io/${{ github.repository }}/pr-${{ github.event.pull_request.number }}/"
+          body: "PR preview: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/"
         # Post a comment so reviewers can access the preview quickly.
 
   deploy-prod:
@@ -262,15 +265,22 @@ jobs:
           name: dist
           path: ./dist
 
+      - name: Inspect downloaded artifact
+        run: |
+          echo "artifact listing:"
+          ls -la ./dist
+          test -f ./dist/index.html || (echo "MISSING ./dist/index.html — check build output" && exit 1)
+        # Confirm artifact contents before publishing.
+
       - name: Ensure smoke script is executable
         run: chmod +x ./scripts/smoke-check.sh
         # Defensive step: ensure the script has execute permissions on the runner.
 
       - name: Run pre-deploy smoke checks
-        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/"
+        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" "" 5 2
         env:
           CI: true
-        # Optional pre-deploy check against the production URL (useful if you have a staging URL instead).
+        # Optional pre-deploy check against the production URL (SPA mode).
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
