@@ -1,3 +1,4 @@
+```yaml
 name: Enterprise CI/CD Portfolio
 
 # Trigger on pushes to main and on pull requests targeting main
@@ -9,11 +10,17 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  pull-requests: write
+  issues: write
 
 # Cancel outdated runs for the same branch to save CI minutes
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
 
 jobs:
   lint:
@@ -25,15 +32,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
         # Use a single Node LTS version for consistency with local dev.
 
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: npm-cache-${{ runner.os }}-
+          key: npm-cache-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-node-
         # Cache npm to speed up repeated CI runs while keeping installs deterministic.
 
       - name: Install dependencies
@@ -71,23 +78,51 @@ jobs:
         run: npm run format:check
         # Ensure code style consistency; CI will fail if files are not formatted.
 
-  type-check:
-    name: TypeScript Check
+  prettier:
+    name: Prettier check (standalone)
     runs-on: ubuntu-latest
-    needs: lint
     steps:
       - uses: actions/checkout@v4
+        # Checkout repository to access source and config files.
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
+        # Use a single Node LTS version for consistency with local dev.
 
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: npm-cache-${{ runner.os }}-
+          key: npm-cache-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-node-
+        # Cache npm to speed up repeated CI runs while keeping installs deterministic.
+
+      - name: Install dependencies
+        run: npm ci
+        # Use npm ci for reproducible installs based on package-lock.json.
+
+      - name: Run Prettier check
+        run: npm run format:check
+        # Ensure code style consistency; CI will fail if files are not formatted.
+
+  type-check:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-cache-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
@@ -99,20 +134,20 @@ jobs:
   test:
     name: Tests & Coverage
     runs-on: ubuntu-latest
-    needs: type-check
+    needs: [type-check]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: npm-cache-${{ runner.os }}-
+          key: npm-cache-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
@@ -132,7 +167,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, prettier]
     outputs:
       dist-path: ./dist
     steps:
@@ -140,14 +175,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: npm-cache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: npm-cache-${{ runner.os }}-
+          key: npm-cache-${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-cache-${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
@@ -177,9 +212,10 @@ jobs:
     name: Deploy PR Preview
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build]
     steps:
       - uses: actions/checkout@v4
+        # Checkout repository to access scripts like smoke-check.sh.
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -188,13 +224,9 @@ jobs:
           path: ./dist
         # Use the same artifact produced by the build job.
 
-      - name: Build project for preview (enable BUILD_INFO consumer)
-        # Set the env var so the BuildInfo component is included in preview builds only.
-        env:
-          REACT_APP_SHOW_BUILD_INFO: "true"
-        run: npm run build
-        # Rebuild here only if your preview pipeline requires a rebuild with env-specific flags.
-        # If your build artifacts are already environment-agnostic, you can skip this step.
+      - name: Inspect downloaded artifact
+        run: ls -la ./dist
+        # Confirm artifact contents before publishing.
 
       - name: Ensure smoke script is executable
         run: chmod +x ./scripts/smoke-check.sh
@@ -210,7 +242,7 @@ jobs:
         # Publish a preview build to a PR-specific path for reviewers.
 
       - name: Run post-deploy smoke checks
-        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/pr-${{ github.event.pull_request.number }}/"
         env:
           CI: true
         # Run lightweight checks to ensure the preview is healthy.
@@ -220,14 +252,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
-          body: "PR preview: https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/pr-${{ github.event.pull_request.number }}/"
+          body: "PR preview: https://${{ github.repository_owner }}.github.io/${{ github.repository }}/pr-${{ github.event.pull_request.number }}/"
         # Post a comment so reviewers can access the preview quickly.
 
   deploy-prod:
     name: Deploy Production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build]
     steps:
       - uses: actions/checkout@v4
 
@@ -242,7 +274,7 @@ jobs:
         # Defensive step: ensure the script has execute permissions on the runner.
 
       - name: Run pre-deploy smoke checks
-        run: ./scripts/smoke-check.sh "https://pauldeveloper73.github.io/Kisakye-Paul-Elite-Portifolio/"
+        run: ./scripts/smoke-check.sh "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/"
         env:
           CI: true
         # Optional pre-deploy check against the production URL (useful if you have a staging URL instead).
@@ -254,3 +286,4 @@ jobs:
           publish_dir: ./dist
           publish_branch: gh-pages
         # Deploy the verified artifact to the production branch.
+```
