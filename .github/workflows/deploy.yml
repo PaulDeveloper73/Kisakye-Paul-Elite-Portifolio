@@ -1,4 +1,3 @@
-```yaml
 name: Enterprise CI/CD Portfolio
 
 # Trigger on pushes to main and on pull requests targeting main
@@ -286,4 +285,3 @@ jobs:
           publish_dir: ./dist
           publish_branch: gh-pages
         # Deploy the verified artifact to the production branch.
-```
