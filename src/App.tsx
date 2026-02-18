@@ -327,9 +327,18 @@ const App: React.FC = () => {
                 I build top-quality apps for big companies. I use the latest tools to solve real
                 business problems. I work fast and make sure your app is safe.
               </p>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
-                <div className="glass p-8 rounded-card border-accent/20 hover:border-accent/40 transition-all">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-4">
+                {/* --- CARD 1 --- */}
+                <div
+                  tabIndex={0}
+                  className="group glass p-8 rounded-card border-accent/20 cursor-pointer transition-all duration-300 ease-out
+                           hover:-translate-y-2 hover:shadow-xl hover:shadow-accent/10 hover:border-accent/50 hover:bg-accent/[0.03] 
+                           active:translate-y-0 active:scale-[0.98] active:bg-accent/[0.08] active:border-accent/70 active:shadow-sm
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                >
+                  {/* Icon reacts to the parent card's hover/active state */}
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-active:scale-95">
                     <Layout className="w-6 h-6" />
                   </div>
                   <h4 className="text-ink font-black text-lg mb-2">Websites</h4>
@@ -337,8 +346,17 @@ const App: React.FC = () => {
                     I build beautiful and fast websites that users love.
                   </p>
                 </div>
-                <div className="glass p-8 rounded-card border-accent/20 hover:border-accent/40 transition-all">
-                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-4">
+
+                {/* --- CARD 2 --- */}
+                <div
+                  tabIndex={0}
+                  className="group glass p-8 rounded-card border-accent/20 cursor-pointer transition-all duration-300 ease-out
+                           hover:-translate-y-2 hover:shadow-xl hover:shadow-accent/10 hover:border-accent/50 hover:bg-accent/[0.03] 
+                           active:translate-y-0 active:scale-[0.98] active:bg-accent/[0.08] active:border-accent/70 active:shadow-sm
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                >
+                  {/* Icon reacts to the parent card's hover/active state */}
+                  <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-active:scale-95">
                     <Layers className="w-6 h-6" />
                   </div>
                   <h4 className="text-ink font-black text-lg mb-2">Systems</h4>
@@ -348,19 +366,35 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+
             <div className="reveal active">
-              <div className="relative group cursor-pointer shadow-accent-lg rounded-section overflow-hidden aspect-video">
+              {/* --- VIDEO THUMBNAIL WRAPPER --- */}
+              <div
+                tabIndex={0}
+                className="relative group cursor-pointer shadow-accent-lg rounded-section overflow-hidden aspect-video transition-all duration-500
+                         hover:shadow-2xl hover:shadow-accent/40 
+                         active:scale-[0.98] active:shadow-accent/20
+                         focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/50 focus-visible:ring-offset-4 focus-visible:ring-offset-white"
+              >
                 <img
                   src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2072&auto=format&fit=crop"
                   alt="Work Process"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-focus-visible:scale-110"
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center shadow-accent transition-transform group-hover:scale-110">
+
+                {/* Overlay that darkens slightly on hover/active to make the play button pop */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-500 group-hover:bg-black/20 group-active:bg-black/40">
+                  {/* Play Button: Inverts colors on hover, shrinks on click */}
+                  <div
+                    className="w-20 h-20 rounded-full bg-accent text-white flex items-center justify-center shadow-accent transition-all duration-300 
+                                group-hover:scale-125 group-hover:bg-white group-hover:text-accent 
+                                group-active:scale-90 group-active:bg-gray-200"
+                  >
                     <Play className="w-8 h-8 fill-current" />
                   </div>
                 </div>
-                <div className="absolute bottom-8 left-8 text-white z-10">
+
+                <div className="absolute bottom-8 left-8 text-white z-10 transition-transform duration-500 group-hover:translate-x-2">
                   <h3 className="text-3xl font-black">Watch My Story</h3>
                 </div>
               </div>
@@ -541,56 +575,88 @@ const App: React.FC = () => {
       </section>
 
       {/* Technologies Section */}
-      <section id="technologies" className="py-28 px-6 border-b border-accent/10">
+      <section
+        id="about"
+        className="py-28 px-6 bg-[color:var(--color-accent)]/2 border-y border-[color:var(--color-accent)]/10"
+      >
         <div className="max-w-[1440px] mx-auto space-y-20">
-          <div className="text-center space-y-5 reveal active">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border-accent/20 mb-4">
-              <Code className="w-4 h-4 text-accent" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-accent/80">
-                Skills & Expertise
-              </span>
-            </div>
-            <h2 className="text-5xl md:text-8xl font-black tracking-tighter">Tools I Use.</h2>
-            <p className="text-xl text-ink/40 font-medium max-w-2xl mx-auto">
-              Full-stack mastery including PHP, SQL, Laravel, and modern React workflows.
-            </p>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="space-y-10 reveal active">
+              <h2 className="text-5xl md:text-7xl font-black tracking-tight">About Me.</h2>
+              <p className="text-xl text-[color:var(--color-ink)]/60 leading-relaxed font-medium">
+                I build top-quality apps for big companies. I use the latest tools to solve real
+                business problems. I work fast and make sure your app is safe.
+              </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-            {TECH_STACK.map((category) => {
-              const IconComp = iconMap[category.icon];
-              return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+                {/* --- CARD 1 --- */}
                 <div
-                  key={category.title}
-                  className="glass p-8 rounded-[2rem] hover:border-accent hover:shadow-accent transition-all group border-accent/20 reveal active relative overflow-hidden flex flex-col h-full"
+                  tabIndex={0}
+                  className="group glass p-8 rounded-[--radius-card] border-[color:var(--color-accent)]/20 cursor-pointer transition-all duration-300 ease-out
+                           hover:-translate-y-2 hover:shadow-xl hover:shadow-[color:var(--color-accent)]/10 hover:border-[color:var(--color-accent)]/50 hover:bg-[color:var(--color-accent)]/5 
+                           active:translate-y-0 active:scale-95 active:bg-[color:var(--color-accent)]/10 active:border-[color:var(--color-accent)]/70
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]/40"
                 >
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all shadow-sm">
-                      <IconComp className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-xl font-black leading-tight">{category.title}</h3>
+                  <div className="w-12 h-12 rounded-2xl bg-[color:var(--color-accent)]/10 flex items-center justify-center text-[color:var(--color-accent)] mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-active:scale-90">
+                    <Layout className="w-6 h-6" />
                   </div>
-                  <div className="flex flex-col gap-4 mt-auto">
-                    {category.skills.map((skill) => (
-                      <div key={skill} className="w-full">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="text-[12px] font-bold text-ink/70 dark:text-ink/80 group-hover:text-ink transition-colors">
-                            {skill}
-                          </span>
-                          <CheckCircle className="w-3 h-3 text-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <div className="h-1.5 w-full bg-accent/5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent/30 w-full group-hover:bg-accent transition-all duration-700 opacity-40 group-hover:opacity-100"
-                            style={{ width: '92%' }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                  <h4 className="text-[color:var(--color-ink)] font-black text-lg mb-2">
+                    Websites
+                  </h4>
+                  <p className="text-[color:var(--color-ink)]/60 text-sm font-medium">
+                    I build beautiful and fast websites that users love.
+                  </p>
+                </div>
+
+                {/* --- CARD 2 --- */}
+                <div
+                  tabIndex={0}
+                  className="group glass p-8 rounded-[--radius-card] border-[color:var(--color-accent)]/20 cursor-pointer transition-all duration-300 ease-out
+                           hover:-translate-y-2 hover:shadow-xl hover:shadow-[color:var(--color-accent)]/10 hover:border-[color:var(--color-accent)]/50 hover:bg-[color:var(--color-accent)]/5 
+                           active:translate-y-0 active:scale-95 active:bg-[color:var(--color-accent)]/10 active:border-[color:var(--color-accent)]/70
+                           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)]/40"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-[color:var(--color-accent)]/10 flex items-center justify-center text-[color:var(--color-accent)] mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-active:scale-90">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-[color:var(--color-ink)] font-black text-lg mb-2">Systems</h4>
+                  <p className="text-[color:var(--color-ink)]/60 text-sm font-medium">
+                    I build strong systems that manage your data safely.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="reveal active">
+              {/* --- VIDEO THUMBNAIL --- */}
+              <div
+                tabIndex={0}
+                className="relative group cursor-pointer shadow-2xl rounded-[--radius-section] overflow-hidden aspect-video transition-all duration-500
+                         hover:shadow-[color:var(--color-accent)]/30 
+                         active:scale-[0.97]
+                         focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:var(--color-accent)]/50"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2072&auto=format&fit=crop"
+                  alt="Work Process"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 group-focus-visible:scale-110"
+                />
+
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-500 group-hover:bg-black/30 group-active:bg-black/50">
+                  <div
+                    className="w-20 h-20 rounded-full bg-[color:var(--color-accent)] text-white flex items-center justify-center transition-all duration-300 
+                                group-hover:scale-125 group-hover:bg-white group-hover:text-[color:var(--color-accent)] 
+                                group-active:scale-90 group-active:bg-gray-200"
+                  >
+                    <Play className="w-8 h-8 fill-current" />
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="absolute bottom-8 left-8 text-white z-10 transition-transform duration-500 group-hover:translate-x-3">
+                  <h3 className="text-3xl font-black">Watch My Story</h3>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -743,7 +809,9 @@ const App: React.FC = () => {
                   <div className="text-[11px] uppercase font-black text-accent tracking-[0.25em] mb-1.5">
                     WhatsApp
                   </div>
-                  <div className="text-2xl font-black tracking-tight">+256 774 185 964</div>
+                  <div className="text-[16px] md:text-2xl font-black tracking-tight">
+                    +256 774 185 964
+                  </div>
                 </div>
               </div>
               <div
@@ -757,7 +825,9 @@ const App: React.FC = () => {
                   <div className="text-[11px] uppercase font-black text-accent tracking-[0.25em] mb-1.5">
                     Email
                   </div>
-                  <div className="text-2xl font-black tracking-tight">kisakyepaul73@gmail.com</div>
+                  <div className="text-[16px] md:text-2xl font-black tracking-tight">
+                    kisakyepaul73@gmail.com
+                  </div>
                 </div>
               </div>
             </div>
