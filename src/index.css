@@ -110,7 +110,10 @@ html {
 }
 
 /* Ensure root elements don't cause layout scaling */
-html, body, #root, #app-theme-root {
+html,
+body,
+#root,
+#app-theme-root {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -120,7 +123,10 @@ html, body, #root, #app-theme-root {
 }
 
 /* Avoid tiny font sizes on interactive controls (prevents iOS auto-zoom) */
-input, textarea, select, button {
+input,
+textarea,
+select,
+button {
   font-size: 16px; /* iOS auto-zooms if control font-size < 16px */
   -webkit-appearance: none;
 }
