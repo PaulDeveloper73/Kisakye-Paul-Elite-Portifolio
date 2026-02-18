@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MessageCircle, Download, ChevronUp } from 'lucide-react';
 
@@ -51,7 +50,9 @@ const FloatingActions: React.FC = () => {
       <button
         onClick={scrollToTop}
         className={`w-12 h-12 rounded-full glass border-accent/20 flex items-center justify-center text-accent shadow-accent transition-all duration-300 transform ${
-          showGoTop ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-10 opacity-0 scale-50 pointer-events-none'
+          showGoTop
+            ? 'translate-y-0 opacity-100 scale-100'
+            : 'translate-y-10 opacity-0 scale-50 pointer-events-none'
         } hover:scale-110 active:scale-95 group relative mb-2`}
         aria-label="Scroll to top"
       >

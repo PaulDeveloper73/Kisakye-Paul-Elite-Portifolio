@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
 import type { Testimonial } from '../types';
@@ -12,7 +11,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(true);
-  
+
   const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Update visible items count based on screen width
@@ -53,7 +52,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
   // Jump logic to create a seamless infinite loop effect
   useEffect(() => {
     const totalOriginal = testimonials.length;
-    
+
     // Scrolled past the end: jump back to start of original list
     if (currentIndex >= totalOriginal + visibleItems) {
       const timer = setTimeout(() => {
@@ -62,7 +61,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
       }, 700);
       return () => clearTimeout(timer);
     }
-    
+
     // Scrolled before the beginning: jump to end of original list
     if (currentIndex <= 0) {
       const timer = setTimeout(() => {
@@ -92,7 +91,11 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
   }, [isPaused, handleNext]);
 
   const totalPages = Math.ceil(testimonials.length / visibleItems);
-  const activePage = Math.floor(((currentIndex - visibleItems) % testimonials.length + testimonials.length) % testimonials.length / visibleItems);
+  const activePage = Math.floor(
+    ((((currentIndex - visibleItems) % testimonials.length) + testimonials.length) %
+      testimonials.length) /
+      visibleItems
+  );
 
   // Correct Translation Calculation:
   // Each item in the flex container has a width of (100 / extendedTestimonials.length)%
@@ -100,7 +103,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
   const translatePercentage = currentIndex * (100 / extendedTestimonials.length);
 
   return (
-    <div 
+    <div
       className="relative w-full mx-auto group/carousel"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -108,16 +111,16 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
       aria-label="Testimonials Carousel"
     >
       <div className="overflow-hidden px-1 md:px-0">
-        <div 
+        <div
           className={`flex ${isTransitioning ? 'transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]' : ''}`}
-          style={{ 
+          style={{
             transform: `translateX(-${translatePercentage}%)`,
-            width: `${(extendedTestimonials.length / visibleItems) * 100}%`
+            width: `${(extendedTestimonials.length / visibleItems) * 100}%`,
           }}
         >
           {extendedTestimonials.map((t, idx) => (
-            <div 
-              key={`${t.id}-${idx}`} 
+            <div
+              key={`${t.id}-${idx}`}
               className="px-3"
               style={{ width: `${100 / extendedTestimonials.length}%` }}
             >
@@ -125,7 +128,7 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
                 <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover/card:scale-125 group-hover/card:rotate-12 transition-transform duration-700 pointer-events-none">
                   <Quote className="w-24 h-24 md:w-28 md:h-28 text-accent" />
                 </div>
-                
+
                 <div className="space-y-6 relative z-10">
                   <div className="flex gap-1 text-accent">
                     {[...Array(5)].map((_, i) => (
@@ -140,10 +143,10 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
                 <div className="flex items-center gap-5 mt-10 pt-8 border-t border-accent/10 relative z-10">
                   <div className="relative shrink-0">
                     <div className="absolute inset-0 bg-accent blur-md opacity-20 rounded-full" />
-                    <img 
-                      src={t.avatar} 
-                      alt={t.name} 
-                      className="w-14 h-14 rounded-full border-2 border-accent/30 relative z-10 object-cover shadow-sm transition-transform duration-500 group-hover/card:scale-110" 
+                    <img
+                      src={t.avatar}
+                      alt={t.name}
+                      className="w-14 h-14 rounded-full border-2 border-accent/30 relative z-10 object-cover shadow-sm transition-transform duration-500 group-hover/card:scale-110"
                     />
                   </div>
                   <div className="overflow-hidden">
@@ -163,14 +166,14 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
 
       {/* Navigation Arrows */}
       <div className="hidden lg:flex absolute top-1/2 -translate-y-1/2 -left-16 -right-16 justify-between pointer-events-none">
-        <button 
+        <button
           onClick={handlePrev}
           className="w-14 h-14 rounded-full glass border-accent/30 flex items-center justify-center text-accent hover:bg-accent hover:text-white transition-all shadow-xl active:scale-90 pointer-events-auto opacity-0 group-hover/carousel:opacity-100 hover:shadow-accent"
           aria-label="Previous Testimonial"
         >
           <ChevronLeft className="w-7 h-7" />
         </button>
-        <button 
+        <button
           onClick={handleNext}
           className="w-14 h-14 rounded-full glass border-accent/30 flex items-center justify-center text-accent hover:bg-accent hover:text-white transition-all shadow-xl active:scale-90 pointer-events-auto opacity-0 group-hover/carousel:opacity-100 hover:shadow-accent"
           aria-label="Next Testimonial"
@@ -186,8 +189,8 @@ const TestimonialCarousel: React.FC<TestimonialCarouselProps> = ({ testimonials 
             key={index}
             onClick={() => setCurrentIndex(index * visibleItems + visibleItems)}
             className={`transition-all duration-500 rounded-full ${
-              activePage === index 
-                ? 'w-12 h-2.5 bg-accent shadow-accent' 
+              activePage === index
+                ? 'w-12 h-2.5 bg-accent shadow-accent'
                 : 'w-2.5 h-2.5 bg-accent/20 hover:bg-accent/50'
             }`}
             aria-label={`Go to slide group ${index + 1}`}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 
 interface StatCounterProps {
@@ -9,11 +8,17 @@ interface StatCounterProps {
   icon?: React.ReactNode;
 }
 
-const StatCounter: React.FC<StatCounterProps> = ({ value, suffix, label, duration = 2000, icon }) => {
+const StatCounter: React.FC<StatCounterProps> = ({
+  value,
+  suffix,
+  label,
+  duration = 2000,
+  icon,
+}) => {
   const [count, setCount] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
   const countRef = useRef<HTMLDivElement>(null);
-  
+
   // Parse numeric value
   const target = parseFloat(value);
   const isFloat = value.includes('.');
@@ -38,14 +43,14 @@ const StatCounter: React.FC<StatCounterProps> = ({ value, suffix, label, duratio
 
   const startAnimation = () => {
     let startTimestamp: number | null = null;
-    
+
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      
+
       // Easing: easeOutQuart
       const easedProgress = 1 - Math.pow(1 - progress, 4);
-      
+
       const currentCount = easedProgress * target;
       setCount(currentCount);
 
@@ -62,8 +67,8 @@ const StatCounter: React.FC<StatCounterProps> = ({ value, suffix, label, duratio
   const displayValue = isFloat ? count.toFixed(1) : Math.floor(count);
 
   return (
-    <div 
-      ref={countRef} 
+    <div
+      ref={countRef}
       className="text-center space-y-3 group"
       aria-label={`${label}: ${value}${suffix}`}
     >
@@ -73,8 +78,14 @@ const StatCounter: React.FC<StatCounterProps> = ({ value, suffix, label, duratio
         </div>
       )}
       <div className="text-5xl md:text-7xl lg:text-8xl font-black text-accent tracking-tighter drop-shadow-sm font-sans tabular-nums">
-        <span aria-hidden="true">{displayValue}{suffix}</span>
-        <span className="sr-only">{value}{suffix}</span>
+        <span aria-hidden="true">
+          {displayValue}
+          {suffix}
+        </span>
+        <span className="sr-only">
+          {value}
+          {suffix}
+        </span>
       </div>
       <div className="text-[11px] uppercase font-black text-ink/40 dark:text-ink/30 tracking-[0.25em] group-hover:text-accent transition-colors">
         {label}
