@@ -45,7 +45,7 @@ const FloatingActions: React.FC = () => {
   ];
 
   return (
-    <div className="fixed bottom-6 right-6 z-[200] flex flex-col items-center gap-3 no-print">
+    <div className="fixed bottom-4 md:bottom-6 right-4 md:right-10 z-[200] flex flex-col items-center gap-3 print:hidden">
       {/* Go to Top Button */}
       <button
         onClick={scrollToTop}
